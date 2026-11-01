@@ -1,0 +1,18 @@
+const assert = require('assert'); const { SchedulerModel } = require('../models/SchedulerModel');
+const s = new SchedulerModel(1);
+const low = s.create({ name: 'low', priority: 5, duration: 1 });
+const high = s.create({ name: 'high', priority: 1, duration: 1 });
+const mid = s.create({ name: 'mid', priority: 3, duration: 1 });
+const late = s.create({ name: 'late', priority: 1, duration: 1, delay: 10 });
+s.tick(Date.now());
+assert.equal(high.status, 'running', 'highest priority runs first');
+s.cancel(mid.id); assert.equal(mid.status, 'cancelled');
+s.reschedule(low.id, { priority: 2 }); assert.equal(low.priority, 2);
+assert.throws(() => s.reschedule(high.id, { priority: 2 }), /Cannot reschedule/);
+assert.throws(() => s.create({ name: '' }), /name is required/);
+s.tick(Date.now() + 1500); assert.equal(high.status, 'completed');
+assert.equal(low.status, 'running', 'cancelled skipped, rescheduled runs');
+s.toggleWorker(1); assert.equal(low.status, 'queued', 'offline worker requeues its task');
+s.toggleWorker(1); s.tick(Date.now() + 20000);
+assert.ok(['running', 'completed'].includes(late.status), 'delayed task promoted');
+console.log('model tests passed');
